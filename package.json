@@ -1,14 +1,16 @@
 {
   "name": "task-manager-api",
   "version": "1.0.0",
-  "description": "",
-  "license": "ISC",
+  "description": "SaaS backend built with Node.js, Express, and MongoDB",
+  "license": "MIT",
   "author": "",
   "type": "module",
   "main": "app.js",
   "scripts": {
     "test": "node app.js",
-    "dev": "nodemon app.js"
+    "dev": "nodemon app.js",
+    "seed": "node scripts/seed.js",
+    "seed:clear": "node scripts/seed.js --clear"
   },
   "dependencies": {
     "bcryptjs": "^3.0.3",
@@ -22,5 +24,27 @@
   },
   "devDependencies": {
     "nodemon": "^3.1.14"
-  }
+  },
+  "nodemonConfig": {
+    "watch": [
+      "*.js",
+      "config/",
+      "controllers/",
+      "middlewares/",
+      "models/",
+      "routes/"
+    ],
+    "ext": "js,json",
+    "ignore": [
+      "scripts/",
+      "node_modules/"
+    ]    
+  },
+  "keywords": [
+    "saas",
+    "multitenant",
+    "express",
+    "mongoose",
+    "rbac"
+  ]
 }
