@@ -2,20 +2,21 @@ import { config } from "dotenv";
 config();
 
 import express from "express";
-import mongoose from "mongoose";
 import cookieParser from "cookie-parser";
 
-import { apiLimiter } from "./middlewares/rateLimiter.js";
 import errorHandler from "./middlewares/errorHandler.js";
+import { apiLimiter } from "./middlewares/rateLimiter.js";
 
 import authRoutes from "./routes/authRoutes.js";
 import userRoutes from "./routes/userRoutes.js";
-import organizationRoutes from "./routes/organizationRoutes.js";
 import taskRoutes from "./routes/taskRoutes.js";
 import roleRoutes from "./routes/roleRoutes.js";
-import notificationRoutes from "./routes/notificationRoutes.js";
-import reportRoutes from "./routes/reportRoutes.js";
 import auditRoutes from "./routes/auditRoutes.js";
+import reportRoutes from "./routes/reportRoutes.js";
+import notificationRoutes from "./routes/notificationRoutes.js";
+import organizationRoutes from "./routes/organizationRoutes.js";
+
+import connectDB from "./config/db.js";
 
 const app = express();
 
@@ -47,6 +48,11 @@ app.all("*", (req, res) => {
 
 app.use(errorHandler);
 
-app.listen(process.env.PORT || 8080, process.env.IP || "0.0.0.0", () => {
-  console.log(`Port: http://localhost:${process.env.PORT}`);
-});
+const start = async () => {
+  await connectDB();
+  app.listen(process.env.PORT || 8080, process.env.IP || "0.0.0.0", () => {
+    console.log(`Port: http://localhost:${process.env.PORT}`);
+  });
+};
+
+start();
