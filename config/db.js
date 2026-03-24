@@ -1,7 +1,8 @@
 import mongoose from "mongoose";
 import { config } from "dotenv";
+import { expand } from "dotenv-expand";
 
-config();
+expand(config());
 
 const MAX_RETRIES = 5;
 const RETRY_DELAY_MS = 3000;
