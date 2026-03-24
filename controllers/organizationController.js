@@ -63,7 +63,6 @@ const deleteOrganization = async (req, res) => {
   }
 };
 
-// POST /api/orgs/:orgId/invite  [admin+]
 const inviteMember = async (req, res) => {
   try {
     const { email, role = "member" } = req.body;
@@ -85,7 +84,7 @@ const inviteMember = async (req, res) => {
       $push: { memberships: { organization: req.orgId, role } },
     });
 
-    // TODO: send invitation email
+    // send invitation email (Will use API later)
 
     res.status(200).json({ message: `${email} invited as ${role}` });
   } catch (err) {
