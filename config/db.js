@@ -11,6 +11,7 @@ let retryCount = 0;
 
 const connectDB = async () => {
   const MONGO_URI = process.env.MONGO_URI;
+  const dbName = process.env.DB_NAME || "saas_app_dev";
 
   if (!MONGO_URI) {
     console.error("MONGO_URI is not defined in environment variables.");
@@ -18,7 +19,8 @@ const connectDB = async () => {
   }
 
   const options = {
-    dbName: process.env.DB_NAME || "saas_app_dev",
+    useNewUrlParser: true,
+    useUnifiedTopology: true,
     maxPoolSize: 10,
     minPoolSize: 2,
     socketTimeoutMS: 45000,
@@ -30,7 +32,7 @@ const connectDB = async () => {
     await mongoose.connect(MONGO_URI, options);
     retryCount = 0;
     console.log(
-      `MongoDB connected [${process.env.NODE_ENV || "development"}] -> ${options.dbName}`,
+      `MongoDB connected [${process.env.NODE_ENV || "development"}] -> ${dbName}`,
     );
   } catch (err) {
     retryCount++;
