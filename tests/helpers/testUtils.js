@@ -8,9 +8,7 @@ import Task from "../../models/taskModel.js";
 
 const connectTestDB = async () => {
   if (mongoose.connection.readyState === 0) {
-    await mongoose.connect(process.env.MONGO_URI, {
-      dbName: process.env.DB_NAME,
-    });
+    await mongoose.connect(process.env.MONGO_URI);
   }
 };
 
