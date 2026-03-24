@@ -7,7 +7,7 @@
   "type": "module",
   "main": "app.js",
   "scripts": {
-    "test": "node app.js",
+    "start": "node app.js",
     "dev": "nodemon app.js",
     "seed": "node scripts/seed.js",
     "seed:clear": "node scripts/seed.js --clear"
