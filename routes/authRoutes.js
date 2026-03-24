@@ -21,4 +21,4 @@ router.patch("/reset-password/:token", authLimiter, resetPassword);
 // Private
 router.post("/logout", protect, logout);
 
-module.exports = router;
+export default router;
