@@ -9,17 +9,23 @@ const signToken = (userId) =>
     expiresIn: process.env.JWT_EXPIRES_IN || "7d",
   });
 
-const sendToken = (user, statusCode, res) => {
+const sendToken = (user, statusCode, resextra = {}) => {
   const token = signToken(user._id);
   user.password = undefined;
-  res.status(statusCode).json({ status: "success", token, data: { user } });
+  res
+    .status(statusCode)
+    .json({ status: "success", token, data: { user }, ...extra });
 };
 
 const register = async (req, res) => {
   const session = await mongoose.startSession();
   try {
     session.startTransaction();
-    const { name, email, password, orgName } = req.body;
+    const { name, email, password, orgName, orgId } = req.body;
+
+    if (!orgId && !orgName) {
+      throw new Error("Provide either orgId (to join) or orgName (to create).");
+    }
 
     const existing = await User.findOne({ email }).session(session);
     if (existing) {
@@ -28,31 +34,118 @@ const register = async (req, res) => {
       return res.status(409).json({ message: "Email already in use" });
     }
 
-    const slug = orgName.toLowerCase().replace(/\s+/g, "-") + "-" + Date.now();
-    const [organization] = await Organization.create(
-      [{ name: orgName, slug }],
-      { session },
-    );
+    let newUser;
 
-    const user = await User.create(
+    if (orgName) {
+      const slug =
+        orgName.toLowerCase().replace(/\s+/g, "-") + "-" + Date.now();
+      const organization = await Organization.create(
+        [{ name: orgName, slug }],
+        {
+          session,
+        },
+      );
+
+      [newUser] = await User.create(
+        [
+          {
+            name,
+            email,
+            password,
+            memberships: [
+              {
+                organization: organization._id,
+                role: "owner",
+                status: "active",
+                joinedAt: new Date(),
+              },
+            ],
+          },
+        ],
+        { session },
+      );
+
+      await session.commitTransaction();
+      session.endSession();
+
+      return sendToken(user[0], 201, res);
+    }
+
+    const organization = await Organization.findById(orgId);
+    if (!organization) {
+      await session.abortTransaction();
+      session.endSession();
+      return res.status(404).json({ message: "Organization not found." });
+    }
+
+    [newUser] = await User.create(
       [
         {
           name,
           email,
           password,
-          memberships: [{ organization: organization._id, role: "owner" }],
+          memberships: [
+            {
+              organization: organization._id,
+              role: "member",
+              status: "pending",
+            },
+          ],
         },
       ],
       { session },
     );
 
-    await session.commitTransaction();
-    session.endSession();
-
-    sendToken(user[0], 201, res);
+    sendToken(newUser, 201, res, {
+      message:
+        "Registration successful. Your membership request is pending admin approval.",
+    });
   } catch (err) {
     await session.abortTransaction();
     session.endSession();
+    res.status(500).json({ message: err.message });
+  }
+};
+
+const registerViaInvite = async (req, res) => {
+  try {
+    const { name, password, token } = req.body;
+
+    if (!token)
+      return res.status(400).json({ message: "Invite token is required." });
+
+    const hashedToken = crypto.createHash("sha256").update(token).digest("hex");
+
+    const invitedUser = await User.findOne({
+      inviteToken: hashedToken,
+      inviteTokenExpires: { $gt: Date.now() },
+    }).select("+inviteToken");
+
+    if (!invitedUser) {
+      return res
+        .status(400)
+        .json({ message: "Invite token is invalid or has expired." });
+    }
+
+    invitedUser.name = name;
+    invitedUser.password = password;
+    invitedUser.inviteToken = undefined;
+    invitedUser.inviteTokenExpires = undefined;
+
+    invitedUser.memberships.forEach((m) => {
+      if (m.status === "pending") {
+        m.status = "active";
+        m.joinedAt = new Date();
+      }
+    });
+
+    await invitedUser.save();
+
+    sendToken(invitedUser, 200, res, {
+      message:
+        "Registration successful. You now have access to your organization.",
+    });
+  } catch (err) {
     res.status(500).json({ message: err.message });
   }
 };
@@ -77,7 +170,13 @@ const login = async (req, res) => {
     user.lastLoginAt = Date.now();
     await user.save({ validateBeforeSave: false });
 
-    sendToken(user, 200, res);
+    const memberships = user.memberships.map((m) => ({
+      organization: m.organization,
+      role: m.role,
+      status: m.status,
+    }));
+
+    sendToken(user, 200, res, { memberships });
   } catch (err) {
     res.status(500).json({ message: err.message });
   }
@@ -102,6 +201,8 @@ const forgotPassword = async (req, res) => {
       .digest("hex");
     user.passwordResetExpires = Date.now() + 10 * 60 * 1000;
     await user.save({ validateBeforeSave: false });
+
+    // Currently sending token in res (Will use API)
 
     res.status(200).json({ message: "Reset token generated", resetToken });
   } catch (err) {
