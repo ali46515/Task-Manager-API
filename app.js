@@ -40,11 +40,11 @@ app.use("/api/orgs/:orgId/reports", reportRoutes);
 app.use("/api/orgs/:orgId/audit", auditRoutes);
 
 // 404(not found) handler
-app.all("*", (req, res) => {
-  res.status(404).json({
-    message: `Cannot find ${req.method} ${req.originalUrl} on this server.`,
-  });
-});
+// app.all("*", (req, res) => {
+//   res.status(404).json({
+//     message: `Cannot find ${req.method} ${req.originalUrl} on this server.`,
+//   });
+// });
 
 app.use(errorHandler);
 

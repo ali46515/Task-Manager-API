@@ -18,9 +18,7 @@ const connectDB = async () => {
     process.exit(1);
   }
 
-  const options = {
-    useNewUrlParser: true,
-    useUnifiedTopology: true,
+  const options = {    
     maxPoolSize: 10,
     minPoolSize: 2,
     socketTimeoutMS: 45000,

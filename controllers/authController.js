@@ -1,7 +1,8 @@
-const crypto = require("crypto");
-const jwt = require("jsonwebtoken");
-const User = require("../models/User");
-const Organization = require("../models/Organization");
+import crypto from "crypto";
+import jwt from "jsonwebtoken";
+import mongoose from "mongoose";
+import User from "../models/userModel.js";
+import Organization from "../models/organizationModel.js";
 
 const signToken = (userId) =>
   jwt.sign({ id: userId }, process.env.JWT_SECRET, {
@@ -15,26 +16,43 @@ const sendToken = (user, statusCode, res) => {
 };
 
 const register = async (req, res) => {
+  const session = await mongoose.startSession();
   try {
+    session.startTransaction();
     const { name, email, password, orgName } = req.body;
 
-    const existing = await User.findOne({ email });
+    const existing = await User.findOne({ email }).session(session);
     if (existing) {
+      await session.abortTransaction();
+      session.endSession();
       return res.status(409).json({ message: "Email already in use" });
     }
 
     const slug = orgName.toLowerCase().replace(/\s+/g, "-") + "-" + Date.now();
-    const organization = await Organization.create({ name: orgName, slug });
+    const [organization] = await Organization.create(
+      [{ name: orgName, slug }],
+      { session },
+    );
 
-    const user = await User.create({
-      name,
-      email,
-      password,
-      memberships: [{ organization: organization._id, role: "owner" }],
-    });
+    const user = await User.create(
+      [
+        {
+          name,
+          email,
+          password,
+          memberships: [{ organization: organization._id, role: "owner" }],
+        },
+      ],
+      { session },
+    );
 
-    sendToken(user, 201, res);
+    await session.commitTransaction();
+    session.endSession();
+
+    sendToken(user[0], 201, res);
   } catch (err) {
+    await session.abortTransaction();
+    session.endSession();
     res.status(500).json({ message: err.message });
   }
 };
