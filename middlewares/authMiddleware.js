@@ -11,47 +11,65 @@ const protect = async (req, res, next) => {
     }
 
     if (!token) {
-      return res
-        .status(401)
-        .json({
-          message: "You are not logged in. Please log in to get access.",
-        });
+      return res.status(401).json({
+        message: "You are not logged in. Please log in to get access.",
+      });
     }
 
     const decoded = jwt.verify(token, process.env.JWT_SECRET);
 
     const user = await User.findById(decoded.id);
-    if (!user) {
-      return res
-        .status(401)
-        .json({
-          message: "The user belonging to this token no longer exists.",
-        });
-    }
-
-    if (!user.isActive) {
+    if (!user)
+      return res.status(401).json({
+        message: "The user belonging to this token no longer exists.",
+      });
+    if (!user.isActive)
       return res
         .status(403)
         .json({ message: "Your account has been deactivated." });
-    }
 
     req.user = user;
     req.orgId = req.params.orgId || null;
 
+    if (req.orgId) {
+      const membership = user.getMembership(req.orgId);
+
+      if (!membership) {
+        return res
+          .status(403)
+          .json({ message: "You are not a member of this organization." });
+      }
+
+      if (membership.status === "pending") {
+        return res.status(403).json({
+          code: "MEMBERSHIP_PENDING",
+          message: "Your membership request is pending admin approval.",
+          status: "pending",
+        });
+      }
+
+      if (membership.status === "rejected") {
+        return res.status(403).json({
+          code: "MEMBERSHIP_REJECTED",
+          message: "Your membership request was rejected.",
+          rejectionReason: membership.rejectionReason || null,
+          status: "rejected",
+        });
+      }
+    }
+
     next();
   } catch (err) {
-    if (err.name === "JsonWebTokenError") {
+    if (err.name === "JsonWebTokenError")
       return res
         .status(401)
         .json({ message: "Invalid token. Please log in again." });
-    }
-    if (err.name === "TokenExpiredError") {
+    if (err.name === "TokenExpiredError")
       return res
         .status(401)
         .json({ message: "Your token has expired. Please log in again." });
-    }
     res.status(500).json({ message: err.message });
   }
 };
 
-export {protect};
+export { protect };
