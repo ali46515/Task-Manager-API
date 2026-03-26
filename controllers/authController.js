@@ -3,6 +3,7 @@ import jwt from "jsonwebtoken";
 import mongoose from "mongoose";
 import User from "../models/userModel.js";
 import Organization from "../models/organizationModel.js";
+import { sendPasswordResetEmail } from "../services/mailService.js";
 
 const signToken = (userId) =>
   jwt.sign({ id: userId }, process.env.JWT_SECRET, {
@@ -202,9 +203,24 @@ const forgotPassword = async (req, res) => {
     user.passwordResetExpires = Date.now() + 10 * 60 * 1000;
     await user.save({ validateBeforeSave: false });
 
-    // Currently sending token in res (Will use API)
+    try {
+      await sendPasswordResetEmail(user.email, resetToken);
+      res.status(200).json({
+        message: "Password reset email sent successfully",
+      });
+    } catch (emailError) {
+      user.passwordResetToken = undefined;
+      user.passwordResetExpires = undefined;
+      await user.save({ validateBeforeSave: false });
 
-    res.status(200).json({ message: "Reset token generated", resetToken });
+      console.error("Email sending failed:", emailError);
+      res.status(500).json({
+        message: "Error sending email. Please try again.",
+        emailError,
+      });
+    }
+
+    // res.status(200).json({ message: "Reset token generated", resetToken });
   } catch (err) {
     res.status(500).json({ message: err.message });
   }
