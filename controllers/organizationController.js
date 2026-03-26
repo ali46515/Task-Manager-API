@@ -85,9 +85,33 @@ const inviteMember = async (req, res) => {
       $push: { memberships: { organization: req.orgId, role } },
     });
 
-    // send invitation email (Will use API later)
+    const organization = await Organization.findById(req.orgId);
+    const inviter = await User.findById(req.user._id);
 
-    res.status(200).json({ message: `${email} invited as ${role}` });
+    // send invitation email (Will use API later)
+    try {
+      await EmailService.sendInvitationEmail(
+        email,
+        inviter.name,
+        organization.name,
+        role,
+      );
+
+      res.status(200).json({
+        message: `${email} invited as ${role}. Invitation email sent.`,
+      });
+    } catch (emailError) {
+      await User.findByIdAndUpdate(invitee._id, {
+        $pull: { memberships: { organization: req.orgId } },
+      });
+
+      console.error("Email sending failed:", emailError);
+      res.status(500).json({
+        message: "Failed to send invitation email. Please try again.",
+      });
+    }
+
+    // res.status(200).json({ message: `${email} invited as ${role}` });
   } catch (err) {
     res.status(500).json({ message: err.message });
   }
