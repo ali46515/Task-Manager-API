@@ -3,7 +3,7 @@ import jwt from "jsonwebtoken";
 import mongoose from "mongoose";
 import User from "../models/userModel.js";
 import Organization from "../models/organizationModel.js";
-import { sendPasswordResetEmail } from "../services/mailService.js";
+import EmailService from "../services/mailService.js";
 
 const signToken = (userId) =>
   jwt.sign({ id: userId }, process.env.JWT_SECRET, {
@@ -204,7 +204,11 @@ const forgotPassword = async (req, res) => {
     await user.save({ validateBeforeSave: false });
 
     try {
-      await sendPasswordResetEmail(user.email, resetToken);
+      await EmailService.sendPasswordResetEmail(
+        user.email,
+        resetToken,
+        user.name || "User",
+      );
       res.status(200).json({
         message: "Password reset email sent successfully",
       });

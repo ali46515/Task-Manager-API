@@ -1,5 +1,6 @@
 import Organization from "../models/organizationModel.js";
 import User from "../models/userModel.js";
+import EmailService from "../services/mailService.js";
 
 const getOrganization = async (req, res) => {
   try {
