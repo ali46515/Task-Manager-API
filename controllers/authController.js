@@ -9,7 +9,7 @@ const signToken = (userId) =>
     expiresIn: process.env.JWT_EXPIRES_IN || "7d",
   });
 
-const sendToken = (user, statusCode, resextra = {}) => {
+const sendToken = (user, statusCode, extra = {}) => {
   const token = signToken(user._id);
   user.password = undefined;
   res
@@ -237,4 +237,11 @@ const resetPassword = async (req, res) => {
   }
 };
 
-export { register, login, logout, forgotPassword, resetPassword };
+export {
+  register,
+  login,
+  logout,
+  forgotPassword,
+  resetPassword,
+  registerViaInvite,
+};
