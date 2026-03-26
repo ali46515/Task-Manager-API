@@ -8,6 +8,7 @@ import {
   forgotPassword,
   resetPassword,
   logout,
+  registerViaInvite,
 } from "../controllers/authController.js";
 import {
   getMe,
@@ -15,9 +16,10 @@ import {
   approveMember,
   getPendingMembers,
   createInvite,
-} from "../controllers/js";
+} from "../controllers/approvalController.js";
 import { protect } from "../middlewares/authMiddleware.js";
-import { authLimiter } from "../middlewares/rateLimiter.js";
+import { requireRole } from "../middlewares/rbacMiddleware.js";
+import { authLimiter, inviteLimiter } from "../middlewares/rateLimiter.js";
 
 // Public
 router.post("/register", authLimiter, register);
